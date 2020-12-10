@@ -9,10 +9,9 @@
  @parse        url, title, content, seed, leech, torrentfile
 """
 
+from urllib.parse import urlencode
 from lxml import html
-from searx.engines.xpath import extract_text
-from searx.url_utils import urlencode
-from searx.utils import get_torrent_size, int_or_zero
+from searx.utils import extract_text, get_torrent_size
 
 # engine dependent config
 categories = ['files', 'images', 'videos', 'music']
@@ -63,7 +62,7 @@ def response(resp):
         except:
             pass
         # I didn't add download/seed/leech count since as I figured out they are generated randomly everytime
-        content = u'Category: "{category}".'
+        content = 'Category: "{category}".'
         content = content.format(category=category)
 
         results.append({'url': href,

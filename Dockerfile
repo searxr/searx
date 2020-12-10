@@ -1,4 +1,4 @@
-FROM alpine:3.10
+FROM alpine:3.12
 ENTRYPOINT ["/sbin/tini","--","/usr/local/searx/dockerfiles/docker-entrypoint.sh"]
 EXPOSE 8080
 VOLUME /etc/searx
@@ -45,12 +45,14 @@ RUN apk upgrade --no-cache \
     ca-certificates \
     su-exec \
     python3 \
+    py3-pip \
     libxml2 \
     libxslt \
     openssl \
     tini \
     uwsgi \
     uwsgi-python3 \
+    brotli \
  && pip3 install --upgrade pip \
  && pip3 install --no-cache -r requirements.txt \
  && apk del build-dependencies \
@@ -63,8 +65,10 @@ RUN su searx -c "/usr/bin/python3 -m compileall -q searx"; \
     touch -c --date=@${TIMESTAMP_UWSGI} dockerfiles/uwsgi.ini; \
     if [ ! -z $VERSION_GITCOMMIT ]; then\
       echo "VERSION_STRING = VERSION_STRING + \"-$VERSION_GITCOMMIT\"" >> /usr/local/searx/searx/version.py; \
-    fi
-
+    fi; \
+    find /usr/local/searx/searx/static -a \( -name '*.html' -o -name '*.css' -o -name '*.js' \
+    -o -name '*.svg' -o -name '*.ttf' -o -name '*.eot' \) \
+    -type f -exec gzip -9 -k {} \+ -exec brotli --best {} \+
 
 # Keep this argument at the end since it change each time
 ARG LABEL_DATE=

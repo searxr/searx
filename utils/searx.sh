@@ -76,6 +76,19 @@ texlive-xetex-bin texlive-collection-fontsrecommended
 texlive-collection-latex dejavu-sans-fonts dejavu-serif-fonts
 dejavu-sans-mono-fonts"
 
+# yum packages
+SEARX_PACKAGES_centos="\
+python36-virtualenv python36 python36-pip python36-lxml python-babel
+uwsgi uwsgi-plugin-python3
+git @development-tools libxml2
+ShellCheck"
+
+BUILD_PACKAGES_centos="\
+firefox graphviz graphviz-gd ImageMagick librsvg2-tools
+texlive-xetex-bin texlive-collection-fontsrecommended
+texlive-collection-latex dejavu-sans-fonts dejavu-serif-fonts
+dejavu-sans-mono-fonts"
+
 case $DIST_ID-$DIST_VERS in
     ubuntu-16.04|ubuntu-18.04)
         SEARX_PACKAGES="${SEARX_PACKAGES_debian}"
@@ -98,6 +111,10 @@ case $DIST_ID-$DIST_VERS in
     fedora-*)
         SEARX_PACKAGES="${SEARX_PACKAGES_fedora}"
         BUILD_PACKAGES="${BUILD_PACKAGES_fedora}"
+        ;;
+    centos-7)
+        SEARX_PACKAGES="${SEARX_PACKAGES_centos}"
+        BUILD_PACKAGES="${BUILD_PACKAGES_centos}"
         ;;
 esac
 
@@ -714,7 +731,7 @@ EOF
         arch-*)
             systemctl --no-pager -l status "uwsgi@${SERVICE_NAME%.*}"
             ;;
-        fedora-*)
+        fedora-*|centos-7)
             systemctl --no-pager -l status uwsgi
             ;;
     esac
@@ -729,7 +746,7 @@ EOF
         case $DIST_ID-$DIST_VERS in
             ubuntu-*|debian-*) tail -f /var/log/uwsgi/app/searx.log ;;
             arch-*)  journalctl -f -u "uwsgi@${SERVICE_NAME%.*}" ;;
-            fedora-*)  journalctl -f -u uwsgi ;;
+            fedora-*|centos-7)  journalctl -f -u uwsgi ;;
         esac
     done
 
@@ -790,15 +807,19 @@ rst-doc() {
     local debian="${SEARX_PACKAGES_debian}"
     local arch="${SEARX_PACKAGES_arch}"
     local fedora="${SEARX_PACKAGES_fedora}"
+    local centos="${SEARX_PACKAGES_centos}"
     local debian_build="${BUILD_PACKAGES_debian}"
     local arch_build="${BUILD_PACKAGES_arch}"
     local fedora_build="${BUILD_PACKAGES_fedora}"
+    local centos_build="${SEARX_PACKAGES_centos}"
     debian="$(echo "${debian}" | sed 's/.*/          & \\/' | sed '$ s/.$//')"
     arch="$(echo "${arch}"     | sed 's/.*/          & \\/' | sed '$ s/.$//')"
     fedora="$(echo "${fedora}" | sed 's/.*/          & \\/' | sed '$ s/.$//')"
+    centos="$(echo "${centos}" | sed 's/.*/          & \\/' | sed '$ s/.$//')"
     debian_build="$(echo "${debian_build}" | sed 's/.*/          & \\/' | sed '$ s/.$//')"
     arch_build="$(echo "${arch_build}"     | sed 's/.*/          & \\/' | sed '$ s/.$//')"
     fedora_build="$(echo "${fedora_build}" | sed 's/.*/          & \\/' | sed '$ s/.$//')"
+    centos_build="$(echo "${centos_build}" | sed 's/.*/          & \\/' | sed '$ s/.$//')"
 
     eval "echo \"$(< "${REPO_ROOT}/docs/build-templates/searx.rst")\""
 
@@ -850,7 +871,7 @@ EOF
 
 EOF
                 ;;
-                fedora-*) cat <<EOF
+                fedora-*|centos-7) cat <<EOF
 
 .. code:: bash
 

@@ -15,21 +15,16 @@ along with searx. If not, see < http://www.gnu.org/licenses/ >.
 (C) 2013- by Adam Tauber, <asciimoo@gmail.com>
 '''
 
-import certifi
 import logging
 from os import environ
 from os.path import realpath, dirname, join, abspath, isfile
 from io import open
-from ssl import OPENSSL_VERSION_INFO, OPENSSL_VERSION
-try:
-    from yaml import safe_load
-except:
-    from sys import exit, stderr
-    stderr.write('[E] install pyyaml\n')
-    exit(2)
+from yaml import safe_load
+
 
 searx_dir = abspath(dirname(__file__))
 engine_dir = dirname(realpath(__file__))
+static_path = abspath(join(dirname(__file__), 'static'))
 
 
 def check_settings_yml(file_name):
@@ -54,6 +49,9 @@ if not settings_path:
 # load settings
 with open(settings_path, 'r', encoding='utf-8') as settings_yaml:
     settings = safe_load(settings_yaml)
+
+if settings['ui']['static_path']:
+    static_path = settings['ui']['static_path']
 
 '''
 enable debug if
@@ -81,16 +79,13 @@ else:
 
 logger = logging.getLogger('searx')
 logger.debug('read configuration from %s', settings_path)
-# Workaround for openssl versions <1.0.2
-# https://github.com/certifi/python-certifi/issues/26
-if OPENSSL_VERSION_INFO[0:3] < (1, 0, 2):
-    if hasattr(certifi, 'old_where'):
-        environ['REQUESTS_CA_BUNDLE'] = certifi.old_where()
-    logger.warning('You are using an old openssl version({0}), please upgrade above 1.0.2!'.format(OPENSSL_VERSION))
-
 logger.info('Initialisation done')
 
 if 'SEARX_SECRET' in environ:
     settings['server']['secret_key'] = environ['SEARX_SECRET']
 if 'SEARX_BIND_ADDRESS' in environ:
     settings['server']['bind_address'] = environ['SEARX_BIND_ADDRESS']
+
+if not searx_debug and settings['server']['secret_key'] == 'ultrasecretkey':
+    logger.error('server.secret_key is not changed. Please use something else instead of ultrasecretkey.')
+    exit(1)

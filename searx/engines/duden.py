@@ -10,9 +10,8 @@
 
 from lxml import html, etree
 import re
-from searx.engines.xpath import extract_text
-from searx.utils import eval_xpath
-from searx.url_utils import quote, urljoin
+from urllib.parse import quote, urljoin
+from searx.utils import extract_text, eval_xpath
 from searx import logger
 
 categories = ['general']
@@ -61,7 +60,6 @@ def response(resp):
 
     except:
         logger.debug("Couldn't read number of results.")
-        pass
 
     for result in eval_xpath(dom, '//section[not(contains(@class, "essay"))]'):
         try:

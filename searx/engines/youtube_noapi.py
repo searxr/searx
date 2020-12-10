@@ -10,9 +10,7 @@
 
 from functools import reduce
 from json import loads
-from searx.engines.xpath import extract_text
-from searx.utils import list_get
-from searx.url_utils import quote_plus
+from urllib.parse import quote_plus
 
 # engine dependent config
 categories = ['videos', 'music']

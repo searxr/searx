@@ -2,10 +2,10 @@
 .DEFAULT_GOAL=help
 
 # START Makefile setup
-export GIT_URL=https://github.com/asciimoo/searx
+export GIT_URL=https://github.com/searx/searx
 export GIT_BRANCH=master
 export SEARX_URL=https://searx.me
-export DOCS_URL=https://asciimoo.github.io/searx
+export DOCS_URL=https://searx.github.io/searx
 # END Makefile setup
 
 include utils/makefile.include
@@ -66,13 +66,10 @@ clean: pyclean docs-clean node.clean test.clean
 PHONY += run
 run:  buildenv pyenvinstall
 	$(Q) ( \
-	sed -i -e "s/debug : False/debug : True/g" ./searx/settings.yml ; \
 	sleep 2 ; \
 	xdg-open http://127.0.0.1:8888/ ; \
-	sleep 3 ; \
-	sed -i -e "s/debug : True/debug : False/g" ./searx/settings.yml ; \
 	) &
-	$(PY_ENV)/bin/python ./searx/webapp.py
+	SEARX_DEBUG=1 $(PY_ENV)/bin/python ./searx/webapp.py
 
 # docs
 # ----
@@ -80,11 +77,11 @@ run:  buildenv pyenvinstall
 sphinx-doc-prebuilds:: buildenv pyenvinstall prebuild-includes
 
 PHONY += docs
-docs:  sphinx-doc-prebuilds sphinx-doc
+docs:  sphinx-doc-prebuilds
 	$(call cmd,sphinx,html,docs,docs)
 
 PHONY += docs-live
-docs-live:  sphinx-doc-prebuilds sphinx-live
+docs-live:  sphinx-doc-prebuilds
 	$(call cmd,sphinx_autobuild,html,docs,docs)
 
 PHONY += prebuild-includes
@@ -121,14 +118,14 @@ buildenv:
 	$(Q)echo "build searx/brand.py"
 	$(Q)echo "GIT_URL = '$(GIT_URL)'"  > searx/brand.py
 	$(Q)echo "GIT_BRANCH = '$(GIT_BRANCH)'"  >> searx/brand.py
-	$(Q)echo "ISSUE_URL = 'https://github.com/asciimoo/searx/issues'" >> searx/brand.py
+	$(Q)echo "ISSUE_URL = 'https://github.com/searx/searx/issues'" >> searx/brand.py
 	$(Q)echo "SEARX_URL = '$(SEARX_URL)'" >> searx/brand.py
 	$(Q)echo "DOCS_URL = '$(DOCS_URL)'" >> searx/brand.py
 	$(Q)echo "PUBLIC_INSTANCES = 'https://searx.space'" >> searx/brand.py
 	$(Q)echo "build utils/brand.env"
 	$(Q)echo "export GIT_URL='$(GIT_URL)'"  > utils/brand.env
 	$(Q)echo "export GIT_BRANCH='$(GIT_BRANCH)'"  >> utils/brand.env
-	$(Q)echo "export ISSUE_URL='https://github.com/asciimoo/searx/issues'" >> utils/brand.env
+	$(Q)echo "export ISSUE_URL='https://github.com/searx/searx/issues'" >> utils/brand.env
 	$(Q)echo "export SEARX_URL='$(SEARX_URL)'" >> utils/brand.env
 	$(Q)echo "export DOCS_URL='$(DOCS_URL)'" >> utils/brand.env
 	$(Q)echo "export PUBLIC_INSTANCES='https://searx.space'" >> utils/brand.env
@@ -213,10 +210,6 @@ gecko.driver:
 PHONY += test test.sh test.pylint test.pep8 test.unit test.coverage test.robot
 test: buildenv test.pylint test.pep8 test.unit gecko.driver test.robot
 
-ifeq ($(PY),2)
-test.pylint:
-	@echo "LINT      skip liniting py2"
-else
 # TODO: balance linting with pylint
 
 test.pylint: pyenvinstall
@@ -224,8 +217,8 @@ test.pylint: pyenvinstall
 		searx/preferences.py \
 		searx/testing.py \
 		searx/engines/gigablast.py \
+		searx/engines/deviantart.py \
 	)
-endif
 
 # ignored rules:
 #  E402 module level import not at top of file
@@ -243,8 +236,9 @@ test.sh:
 	shellcheck -x .config.sh
 
 test.pep8: pyenvinstall
-	@echo "TEST      pep8"
-	$(Q)$(PY_ENV_ACT); pep8 --exclude='searx/static, searx/engines/gigablast.py' --max-line-length=120 --ignore "E402,W503" searx tests
+	@echo "TEST      pycodestyle (formerly pep8)"
+	$(Q)$(PY_ENV_ACT); pycodestyle --exclude='searx/static, searx/languages.py, searx/engines/gigablast.py, searx/engines/deviantart.py' \
+        --max-line-length=120 --ignore "E117,E252,E402,E722,E741,W503,W504,W605" searx tests
 
 test.unit: pyenvinstall
 	@echo "TEST      tests/unit"

@@ -12,10 +12,8 @@
 
 import random
 import string
-from dateutil import parser
 from json import loads
-from lxml import html
-from searx.url_utils import urlencode
+from urllib.parse import urlencode
 from datetime import datetime
 
 # engine dependent config

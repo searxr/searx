@@ -19,14 +19,13 @@ along with searx. If not, see < http://www.gnu.org/licenses/ >.
 import sys
 import threading
 from os.path import realpath, dirname
-from io import open
 from babel.localedata import locale_identifiers
 from flask_babel import gettext
 from operator import itemgetter
-from json import loads
-from requests import get
 from searx import settings
 from searx import logger
+from searx.data import ENGINES_LANGUAGES
+from searx.poolrequests import get, get_proxy_cycles
 from searx.utils import load_module, match_language, get_engine_from_settings
 
 
@@ -38,7 +37,6 @@ engines = {}
 
 categories = {'general': []}
 
-languages = loads(open(engine_dir + '/../data/engines_languages.json', 'r', encoding='utf-8').read())
 babel_langs = [lang_parts[0] + '-' + lang_parts[-1] if len(lang_parts) > 1 else lang_parts[0]
                for lang_parts in (lang_code.split('_') for lang_code in locale_identifiers())]
 
@@ -74,20 +72,25 @@ def load_engine(engine_data):
 
     try:
         engine = load_module(engine_module + '.py', engine_dir)
+    except (SyntaxError, KeyboardInterrupt, SystemExit, SystemError, ImportError, RuntimeError) as e:
+        logger.exception('Fatal exception in engine "{}"'.format(engine_module))
+        sys.exit(1)
     except:
         logger.exception('Cannot load engine "{}"'.format(engine_module))
         return None
 
-    for param_name in engine_data:
+    for param_name, param_value in engine_data.items():
         if param_name == 'engine':
-            continue
-        if param_name == 'categories':
-            if engine_data['categories'] == 'none':
+            pass
+        elif param_name == 'categories':
+            if param_value == 'none':
                 engine.categories = []
             else:
-                engine.categories = list(map(str.strip, engine_data['categories'].split(',')))
-            continue
-        setattr(engine, param_name, engine_data[param_name])
+                engine.categories = list(map(str.strip, param_value.split(',')))
+        elif param_name == 'proxies':
+            engine.proxies = get_proxy_cycles(param_value)
+        else:
+            setattr(engine, param_name, param_value)
 
     for arg_name, arg_value in engine_default_args.items():
         if not hasattr(engine, arg_name):
@@ -105,8 +108,8 @@ def load_engine(engine_data):
             sys.exit(1)
 
     # assign supported languages from json file
-    if engine_data['name'] in languages:
-        setattr(engine, 'supported_languages', languages[engine_data['name']])
+    if engine_data['name'] in ENGINES_LANGUAGES:
+        setattr(engine, 'supported_languages', ENGINES_LANGUAGES[engine_data['name']])
 
     # find custom aliases for non standard language codes
     if hasattr(engine, 'supported_languages'):
@@ -140,6 +143,17 @@ def load_engine(engine_data):
     if not engine.offline:
         engine.stats['page_load_time'] = 0
         engine.stats['page_load_count'] = 0
+
+    # tor related settings
+    if settings['outgoing'].get('using_tor_proxy'):
+        # use onion url if using tor.
+        if hasattr(engine, 'onion_url'):
+            engine.search_url = engine.onion_url + getattr(engine, 'search_path', '')
+    elif 'onions' in engine.categories:
+        # exclude onion engines if not using tor.
+        return None
+
+    engine.timeout += settings['outgoing'].get('extra_proxy_timeout', 0)
 
     for category_name in engine.categories:
         categories.setdefault(category_name, []).append(engine)
@@ -251,8 +265,9 @@ def get_engines_stats(preferences):
 
 
 def load_engines(engine_list):
-    global engines
+    global engines, engine_shortcuts
     engines.clear()
+    engine_shortcuts.clear()
     for engine_data in engine_list:
         engine = load_engine(engine_data)
         if engine is not None:
