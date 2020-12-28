@@ -14,12 +14,11 @@
  *
  * (C) 2014 by Thomas Pointhuber, <thomas.pointhuber@gmx.at>
  */
-
 requirejs.config({
     baseUrl: './static/themes/searxr/js',
     paths: {
         app: '../app'
-    }
+    } 
 });
 ;/**
  * searx is free software: you can redistribute it and/or modify
@@ -513,4 +512,58 @@ $(document).ready(function(){
         $(".onoffswitch-checkbox").each(function() { this.checked = true;});
     });
 });
+
+// set custom styles 
+// *REMOVEME* all css is temporary during this milestone
+$(document).ready(function(){
+	$('.searx-navbar').css({
+		'background':'#FFF',
+		'color':'#888'
+	})
+	$('.searx-navbar a').css('color','#888')
+})
+
+// enable voice recognition 
+$(document).ready(function(){
+	if (annyang) {
+
+	  let intro  = 'Say: search cats'
+
+	  let setPlaceholder
+	  setPlaceholder = (str) => {
+		str = ( str || setPlaceholder.str || intro ) + '.'
+		if( str.substr(-4) == '....' ) str = str.replace(/[\.]+$/,'')
+		setPlaceholder.str = str 
+	    $('input#q').attr('placeholder', setPlaceholder.str )
+	  }
+
+	  // Let's define a command.
+	  const commands = {
+		'search *query': (q) => {
+			$('input#q').val(q)
+			$('form#search_form').submit()	
+		}
+	  };
+
+	  // Add our commands to annyang
+	  annyang.addCommands(commands);
+
+	  annyang.addCallback('start',         () => setPlaceholder(intro) )
+	  annyang.addCallback('end',           () => setPlaceholder('searching') )
+	  annyang.addCallback('result',        () => setPlaceholder('searching') )
+	  annyang.addCallback('resultNoMatch', () => {
+		setPlaceholder('not sure what you mean')
+		setTimeout( () => setPlaceholder(), 2000 )
+	  })
+	  
+	  annyang.addCallback('soundstart', () => setPlaceholder(intro) )
+
+	  setInterval( () => setPlaceholder(intro), 300 )
+
+	  // Start listening.
+	  annyang.start();
+
+	  console.log("voice recognition initialized")
+	}	
+})
 
